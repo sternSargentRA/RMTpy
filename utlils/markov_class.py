@@ -11,6 +11,7 @@ Reference: Recursive Macroeconomic Theory:
 
 TODO:
 * Add ergodic sets (Possibly done)
+* Find good definition for ergodicity
 '''
 import numpy as np
 import scipy.linalg as la
@@ -36,6 +37,18 @@ class DMarkov(object):
     pers : scalar : int
         The number of periods to simulate the markov chain
 
+    statdists : np.ndarray : float
+        An array with stationary distributions as columns
+
+    ergodic_sets : list : lists
+        A list of lists where each list in the main list
+        has one of the ergodic sets.
+
+    ergodic_stat_dists : np.ndarray : floats
+        An array with the ergodic stationary distributions
+        as columns
+
+
     Methods
     -------
     stationarity : This method finds stationary distributions
@@ -48,6 +61,18 @@ class DMarkov(object):
 
     """
     def __init__(self, P, pi_0=None, pers=None):
+        """
+        Parameters
+        ----------
+        P : np.ndarray : float
+            The transition matrix
+
+        pi_0 : np.ndarray : float
+            The initial probability distribution
+
+        pers : scalar : int
+            The number of periods to simulate the markov chain
+        """
         self.P = P
         self.n = P.shape[0]
         self.pi_0 = pi_0
@@ -181,7 +206,7 @@ class DMarkov(object):
         eigvals, eigvecs = la.eig(P)
 
         # Find the inex of where the unit eig-vals are
-        index = np.where(eigvals == 1.0)[0]
+        index = np.where(abs(eigvals - 1.) < 1e-10)[0]
 
         # Pull out corresponding eig-vecs
         invar_funcs = eigvecs[:, index]
