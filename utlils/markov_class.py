@@ -37,21 +37,22 @@ class DMarkov(object):
     pers : scalar : int
         The number of periods to simulate the markov chain
 
-    statdists : np.ndarray : float
-        An array with stationary distributions as columns
+    invar_dists : np.ndarray : float
+        An array with invariant distributions as columns
 
     ergodic_sets : list : lists
         A list of lists where each list in the main list
         has one of the ergodic sets.
 
-    ergodic_stat_dists : np.ndarray : floats
-        An array with the ergodic stationary distributions
+    ergodic_invar_dists : np.ndarray : floats
+        An array with the ergodic invariant distributions
         as columns
 
 
     Methods
     -------
-    stationarity : This method finds stationary distributions
+    invariant_distributions : This method finds invariant
+                              distributions
 
     ergodicity : This method determines which distributions
                  are ergodic
@@ -86,19 +87,19 @@ class DMarkov(object):
         if np.all(np.sum(P, axis=1) != np.ones(P.shape[0])):
             raise ValueError('The rows must sum to 1. P is a trans matrix')
 
-        self.stationarity()
+        self.invariant_distributions()
         self._find_erg_sets()
 
     def __repr__(self):
         msg = "Markov process with transition matrix \n P = \n {0} \n \
                \n with ergodic sets E = {1} and \n \
-               \n stationary distributions \n pi = \n {2}"
-        return msg.format(self.P, self.ergodic_sets, self.statdists)
+               \n invariant distributions \n pi = \n {2}"
+        return msg.format(self.P, self.ergodic_sets, self.invar_dists)
 
     def __str__(self):
         return str(self.__repr__)
 
-    def stationarity(self):
+    def invariant_distributions(self):
         """
         This method determines the stationary distributions of P.
         These are the eigenvectors that correspond to the unit eigen-
@@ -130,10 +131,10 @@ class DMarkov(object):
         uniteigvecs = eigvecs[:, index]
 
         # Scale so that the stationary distributions sum to 1
-        statdists = uniteigvecs/np.sum(uniteigvecs, axis=0)
-        self.statdists = statdists
+        invar_dists = uniteigvecs/np.sum(uniteigvecs, axis=0)
+        self.invar_dists = invar_dists
 
-        return statdists
+        return invar_dists
 
     def ergodicity(self, distributions_to_check):
         """
@@ -153,7 +154,7 @@ class DMarkov(object):
 
         Returns
         -------
-        ergodic_stat_dists : np.ndarray : Boolean
+        ergodic_invar_dists : np.ndarray : Boolean
             This is an array that contains all of the stationary
             distributions that are also ergodic.
 
@@ -163,14 +164,14 @@ class DMarkov(object):
             initial distribution is ergodic or not
         """
         if distributions_to_check == "stationary":
-            ergodic_stat_dists = np.zeros(self.statdists.shape[1])
+            ergodic_invar_dists = np.zeros(self.invar_dists.shape[1])
             erg_dists = 0
-            for i in xrange(self.statdists.shape[1]):
-                ergodic_stat_dists[i] = self._check_erg(self.statdists[:, i])
-                if ergodic_stat_dists[i] == True:
+            for i in xrange(self.invar_dists.shape[1]):
+                ergodic_invar_dists[i] = self._check_erg(self.invar_dists[:, i])
+                if ergodic_invar_dists[i] == True:
                     erg_dists += 1
-            temp1 = self.statdists[:, np.where(ergodic_stat_dists == True)[0]]
-            self.ergodic_stat_dists = temp1
+            temp1 = self.invar_dists[:, np.where(ergodic_invar_dists == True)[0]]
+            self.ergodic_invar_dists = temp1
 
         if distributions_to_check == "initial":
             if self.pi_0 == None:
@@ -367,6 +368,5 @@ P2 = np.array([[ .5,  .5,  0.,  0. ],
 
 
 MC = DMarkov(P)
-print("Ergodic sets are", MC.ergodic_sets)
-print("Stationary distributions are", MC.statdists)
-MC.simulate_chain(MC.statdists[:, 0], 100)
+print(MC)
+MC.simulate_chain(MC.invar_dists[:, 0], 100)
