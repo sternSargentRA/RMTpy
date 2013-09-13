@@ -17,15 +17,15 @@ import scipy.linalg as la
 from numpy.linalg import matrix_power
 
 
-class Markov_Mat(object):
+class DMarkov(object):
     """
-    This class takes a transition matrix P, an initial distribution,
-    number of periods to be simulated and returns key information
-    about the matrix P, and a simulation of the markov chain and
-    returns the chain as a series of states
+    This class takes a discrete transition matrix P, an initial
+    distribution, number of periods to be simulated and returns
+    key information about the matrix P, and a simulation of the
+    markov chain and returns the chain as a series of states
     (states don't use python indexing: Namely the first state is 1)
 
-    Parameters
+    Attributes
     ----------
     P : np.ndarray : float
         The transition matrix
@@ -36,9 +36,16 @@ class Markov_Mat(object):
     pers : scalar : int
         The number of periods to simulate the markov chain
 
-    Returns
+    Methods
     -------
-    None
+    stationarity : This method finds stationary distributions
+
+    ergodicity : This method determines which distributions
+                 are ergodic
+
+    simulate_chain : Simulates the markov chain for a given
+                     initial distribution
+
     """
     def __init__(self, P, pi_0=None, pers=None):
         self.P = P
@@ -55,11 +62,11 @@ class Markov_Mat(object):
             raise ValueError('The rows must sum to 1. P is a trans matrix')
 
         self.stationarity()
-        self.find_erg_sets()
+        self._find_erg_sets()
 
     def __repr__(self):
-        msg = "Markov process with transition matrix \n P = \n {0} \
-               \n with ergodic sets E = {1} and \
+        msg = "Markov process with transition matrix \n P = \n {0} \n \
+               \n with ergodic sets E = {1} and \n \
                \n stationary distributions \n pi = \n {2}"
         return msg.format(self.P, self.ergodic_sets, self.statdists)
 
@@ -134,7 +141,7 @@ class Markov_Mat(object):
             ergodic_stat_dists = np.zeros(self.statdists.shape[1])
             erg_dists = 0
             for i in xrange(self.statdists.shape[1]):
-                ergodic_stat_dists[i] = self.check_erg(self.statdists[:, i])
+                ergodic_stat_dists[i] = self._check_erg(self.statdists[:, i])
                 if ergodic_stat_dists[i] == True:
                     erg_dists += 1
             temp1 = self.statdists[:, np.where(ergodic_stat_dists == True)[0]]
@@ -143,7 +150,7 @@ class Markov_Mat(object):
         if distributions_to_check == "initial":
             if self.pi_0 == None:
                 raise ValueError('No initial distribution given. Cant compute')
-            ergodic_pi_0 = self.check_erg(self.pi_0)
+            ergodic_pi_0 = self._check_erg(self.pi_0)
             if ergodic_pi_0 == True:
                 self.ergodic_pi_0 = "(P, pi_0) is ergodic"
             else:
@@ -153,7 +160,7 @@ class Markov_Mat(object):
             self.ergodicity("stationary")
             self.ergodicity("initial")
 
-    def check_erg(self, dists):
+    def _check_erg(self, dists):
         """
         This method is called by ergodicity.  It checks whether a
         group of distributions are ergodic.
@@ -232,7 +239,7 @@ class Markov_Mat(object):
 
         return mc_simul
 
-    def find_erg_sets(self):
+    def _find_erg_sets(self):
         """
         This method finds all of the ergodic sets for a given transition
         matrix P.  It saves the ergodic sets in the class object.
@@ -317,10 +324,6 @@ class Markov_Mat(object):
             and check_equiv not in ergodic_sets:
                 ergodic_sets.append(check_equiv)
 
-
-
-
-
         self.ergodic_sets = ergodic_sets
         return None
 
@@ -338,7 +341,7 @@ P2 = np.array([[ .5,  .5,  0.,  0. ],
                [ 0.,  0.,  .5,  .5 ]])
 
 
-MC = Markov_Mat(P)
+MC = DMarkov(P)
 print("Ergodic sets are", MC.ergodic_sets)
 print("Stationary distributions are", MC.statdists)
 MC.simulate_chain(MC.statdists[:, 0], 100)
