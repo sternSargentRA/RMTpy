@@ -2,8 +2,7 @@
 Author: Chase Coleman and Spencer Lyon
 
 This file contains a class that takes a markov matrix and determines
-several important pieces of information about it such as:
-Stationarity, ergodicity, etc...
+several important pieces of information about it.
 
 Reference: Recursive Macroeconomic Theory:
            Thomas Sargent and Lars Ljungqvist
@@ -11,11 +10,13 @@ Reference: Recursive Macroeconomic Theory:
 
 TODO:
 * Add ergodic sets (Possibly done)
-* Find good definition for ergodicity
+* Determine ergodicity of (P, pi)
+* Check for other things to do w/ a markov chain
 '''
 import numpy as np
 import scipy.linalg as la
 from numpy.linalg import matrix_power
+import matplotlib.pyplot as plt
 
 
 class DMarkov(object):
@@ -24,7 +25,6 @@ class DMarkov(object):
     distribution, number of periods to be simulated and returns
     key information about the matrix P, and a simulation of the
     markov chain and returns the chain as a series of states
-    (states don't use python indexing: Namely the first state is 1)
 
     Attributes
     ----------
@@ -34,9 +34,6 @@ class DMarkov(object):
     pi_0 : np.ndarray : float
         The initial probability distribution
 
-    pers : scalar : int
-        The number of periods to simulate the markov chain
-
     invar_dists : np.ndarray : float
         An array with invariant distributions as columns
 
@@ -44,24 +41,17 @@ class DMarkov(object):
         A list of lists where each list in the main list
         has one of the ergodic sets.
 
-    ergodic_invar_dists : np.ndarray : floats
-        An array with the ergodic invariant distributions
-        as columns
-
 
     Methods
     -------
     invariant_distributions : This method finds invariant
                               distributions
 
-    ergodicity : This method determines which distributions
-                 are ergodic
-
     simulate_chain : Simulates the markov chain for a given
                      initial distribution
 
     """
-    def __init__(self, P, pi_0=None, pers=None):
+    def __init__(self, P, pi_0=None):
         """
         Parameters
         ----------
@@ -77,7 +67,6 @@ class DMarkov(object):
         self.P = P
         self.n = P.shape[0]
         self.pi_0 = pi_0
-        self.pers = pers
 
         # double check that P is a square matrix
         if P.shape[0] != P.shape[1]:
@@ -136,94 +125,7 @@ class DMarkov(object):
 
         return invar_dists
 
-    def ergodicity(self, distributions_to_check):
-        """
-        This method determines which of the stationary distribution are
-        ergodic.  If an initial distribution is given then it also will
-        evaluate whether (P, pi_0) is an ergodic markov chain.
-
-        Parameters
-        ----------
-        self : object
-
-        distributions_to_check : string
-            A string.  Either "stationary" or "initial" or "all".  It
-            determines whether the method checks the ergodicity of
-            the stationary distributions or initial distributions or
-            possibly both.
-
-        Returns
-        -------
-        ergodic_invar_dists : np.ndarray : Boolean
-            This is an array that contains all of the stationary
-            distributions that are also ergodic.
-
-        ergodic_pi_0 : scalar : Boolean
-            If an initial probability distribution was
-            given then this will tell you whether the
-            initial distribution is ergodic or not
-        """
-        if distributions_to_check == "stationary":
-            ergodic_invar_dists = np.zeros(self.invar_dists.shape[1])
-            erg_dists = 0
-            for i in xrange(self.invar_dists.shape[1]):
-                ergodic_invar_dists[i] = self._check_erg(self.invar_dists[:, i])
-                if ergodic_invar_dists[i] == True:
-                    erg_dists += 1
-            temp1 = self.invar_dists[:, np.where(ergodic_invar_dists == True)[0]]
-            self.ergodic_invar_dists = temp1
-
-        if distributions_to_check == "initial":
-            if self.pi_0 == None:
-                raise ValueError('No initial distribution given. Cant compute')
-            ergodic_pi_0 = self._check_erg(self.pi_0)
-            if ergodic_pi_0 == True:
-                self.ergodic_pi_0 = "(P, pi_0) is ergodic"
-            else:
-                self.ergodic_pi_0 = "(P, pi_0) is not ergodic"
-
-        if distributions_to_check == "all":
-            self.ergodicity("stationary")
-            self.ergodicity("initial")
-
-    def _check_erg(self, dists):
-        """
-        This method is called by ergodicity.  It checks whether a
-        group of distributions are ergodic.
-
-        Parameters
-        ----------
-        self : object
-
-        dists : np.ndarray : float
-            Distribution to check for ergodicity with transition mat P
-
-        Returns : scalar : Boolean
-            Whether (P, dists) is ergodic or not
-        """
-        P = self.P
-
-        # Find the invariant functions : Solve (P - I)\bar{y} = 0
-        eigvals, eigvecs = la.eig(P)
-
-        # Find the inex of where the unit eig-vals are
-        index = np.where(abs(eigvals - 1.) < 1e-10)[0]
-
-        # Pull out corresponding eig-vecs
-        invar_funcs = eigvecs[:, index]
-
-        # Find out which states are possible (i.e. where the
-        # probability of dists != 0)
-        index_1 = np.where(dists > 0.)[0]
-
-        # Check to see if y_i = y_j for all i,j where dists(i) and
-        # dists(j) != 0
-        if np.allclose(invar_funcs[index_1[0], :], invar_funcs[index_1, :]):
-            return True
-        else:
-            return False
-
-    def simulate_chain(self, dist, pers=500):
+    def simulate_chain(self, dist, plot=False, pers=500):
         """
         This method takes a distribution and simulates it for pers
         periods (default number of periods is 500).
@@ -262,6 +164,17 @@ class DMarkov(object):
             mc_simul[i] = np.where(cum_probs[i, :] > rand_draw[i])[0][0]
 
         self.simulated_chain = mc_simul
+
+        if plot==True:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(np.arange(pers), self.simulated_chain)
+            ax.set_title("Markov Simulation for Transition Matrix")
+            ax.set_xlabel("Period")
+            ax.set_ylabel("State")
+            ax.set_ylim((0, self.n))
+
+            plt.savefig("simulated_chain.png")
 
         return mc_simul
 
@@ -354,6 +267,9 @@ class DMarkov(object):
         return None
 
 
+# Example of how to use this class
+
+# define the transition matrix
 P = np.array([[.2, .7, .1, 0., 0., 0.],
               [.4, .1, .5, 0., 0., 0.],
               [0., .5, .5, 0., 0., 0.],
@@ -361,12 +277,15 @@ P = np.array([[.2, .7, .1, 0., 0., 0.],
               [0., 0., 0., 0., 1., 0.],
               [.1, 0., 0., .1, 0., .8]])
 
-P2 = np.array([[ .5,  .5,  0.,  0. ],
-               [ .5,  .5,  0.,  0. ],
-               [ 0.,  0.,  .5,  .5 ],
-               [ 0.,  0.,  .5,  .5 ]])
-
-
+# Create an object (MC) that is the object created by
+# DMarkov
 MC = DMarkov(P)
+
+# If you type print(MC) or just MC then it should return
+# several valuable pieces of information about the markov
+# chain
 print(MC)
-MC.simulate_chain(MC.invar_dists[:, 0], 100)
+
+# Simulate the chain using the first invariant distribution for
+# 100 periods and plot it (plot gets saved in directory)
+MC.simulate_chain(MC.invar_dists[:, 0], True, 100)
